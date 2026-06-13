@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_1"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="Camunda Modeler" exporterVersion="5.0.0">
+  <bpmn:process id="OrderFulfillmentProcess" name="Order Fulfillment Process" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Order Placed">
+      <bpmn:outgoing>Flow_Start_To_Payment</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start_To_Payment" sourceRef="StartEvent_1" targetRef="Activity_ProcessPayment" />
+
+    <bpmn:serviceTask id="Activity_ProcessPayment" name="Process Payment" camunda:delegateExpression="${processPaymentDelegate}">
+      <bpmn:incoming>Flow_Start_To_Payment</bpmn:incoming>
+      <bpmn:outgoing>Flow_Payment_To_Gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:sequenceFlow id="Flow_Payment_To_Gateway" sourceRef="Activity_ProcessPayment" targetRef="Gateway_PaymentSuccess" />
+
+    <bpmn:exclusiveGateway id="Gateway_PaymentSuccess" name="Payment Successful?">
+      <bpmn:incoming>Flow_Payment_To_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Payment_Failed</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Payment_Success</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Payment Failed Path -->
+    <bpmn:sequenceFlow id="Flow_Payment_Failed" name="No" sourceRef="Gateway_PaymentSuccess" targetRef="Activity_CancelOrder">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${paymentStatus == 'FAILED'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:serviceTask id="Activity_CancelOrder" name="Update Status: Cancelled" camunda:delegateExpression="${updateOrderStatusDelegate}">
+      <bpmn:extensionElements>
+        <camunda:field name="status">
+          <camunda:string>CANCELLED</camunda:string>
+        </camunda:field>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Payment_Failed</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cancel_To_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:sequenceFlow id="Flow_Cancel_To_End" sourceRef="Activity_CancelOrder" targetRef="EndEvent_Cancelled" />
+
+    <bpmn:endEvent id="EndEvent_Cancelled" name="Order Cancelled">
+      <bpmn:incoming>Flow_Cancel_To_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Payment Success Path -->
+    <bpmn:sequenceFlow id="Flow_Payment_Success" name="Yes" sourceRef="Gateway_PaymentSuccess" targetRef="Activity_PaymentSuccessStatus">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${paymentStatus == 'SUCCESS'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:serviceTask id="Activity_PaymentSuccessStatus" name="Update Status: Payment Success" camunda:delegateExpression="${updateOrderStatusDelegate}">
+      <bpmn:extensionElements>
+        <camunda:field name="status">
+          <camunda:string>PAYMENT_SUCCESS</camunda:string>
+        </camunda:field>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Payment_Success</bpmn:incoming>
+      <bpmn:outgoing>Flow_PaymentStatus_To_Kitchen</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:sequenceFlow id="Flow_PaymentStatus_To_Kitchen" sourceRef="Activity_PaymentSuccessStatus" targetRef="Activity_ProcessKitchen" />
+
+    <bpmn:serviceTask id="Activity_ProcessKitchen" name="Kitchen Preparation" camunda:delegateExpression="${processKitchenDelegate}">
+      <bpmn:incoming>Flow_PaymentStatus_To_Kitchen</bpmn:incoming>
+      <bpmn:outgoing>Flow_Kitchen_To_KitchenStatus</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:sequenceFlow id="Flow_Kitchen_To_KitchenStatus" sourceRef="Activity_ProcessKitchen" targetRef="Activity_KitchenReadyStatus" />
+
+    <bpmn:serviceTask id="Activity_KitchenReadyStatus" name="Update Status: Kitchen Ready" camunda:delegateExpression="${updateOrderStatusDelegate}">
+      <bpmn:extensionElements>
+        <camunda:field name="status">
+          <camunda:string>KITCHEN_READY</camunda:string>
+        </camunda:field>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Kitchen_To_KitchenStatus</bpmn:incoming>
+      <bpmn:outgoing>Flow_KitchenStatus_To_Delivery</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:sequenceFlow id="Flow_KitchenStatus_To_Delivery" sourceRef="Activity_KitchenReadyStatus" targetRef="Activity_ProcessDelivery" />
+
+    <bpmn:serviceTask id="Activity_ProcessDelivery" name="Delivery Status" camunda:delegateExpression="${processDeliveryDelegate}">
+      <bpmn:incoming>Flow_KitchenStatus_To_Delivery</bpmn:incoming>
+      <bpmn:outgoing>Flow_Delivery_To_DeliveryStatus</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:sequenceFlow id="Flow_Delivery_To_DeliveryStatus" sourceRef="Activity_ProcessDelivery" targetRef="Activity_DeliveryStatus" />
+
+    <bpmn:serviceTask id="Activity_DeliveryStatus" name="Update Status: Delivered" camunda:delegateExpression="${updateOrderStatusDelegate}">
+      <bpmn:extensionElements>
+        <camunda:field name="status">
+          <camunda:string>DELIVERED</camunda:string>
+        </camunda:field>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Delivery_To_DeliveryStatus</bpmn:incoming>
+      <bpmn:outgoing>Flow_DeliveryStatus_To_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:sequenceFlow id="Flow_DeliveryStatus_To_End" sourceRef="Activity_DeliveryStatus" targetRef="EndEvent_Completed" />
+
+    <bpmn:endEvent id="EndEvent_Completed" name="Order Completed">
+      <bpmn:incoming>Flow_DeliveryStatus_To_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="OrderFulfillmentProcess">
+      <!-- Diagram details are simplified to keep the file small, Camunda modeler will auto-layout if needed -->
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
