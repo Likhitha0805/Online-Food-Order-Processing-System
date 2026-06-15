@@ -17,12 +17,15 @@ public class ProcessDeliveryDelegate implements JavaDelegate {
 
     private final RestTemplate restTemplate;
 
+    @org.springframework.beans.factory.annotation.Value("${service.delivery.url}")
+    private String deliveryServiceUrl;
+
     @Override
     public void execute(DelegateExecution execution) throws Exception {
         Long orderId = (Long) execution.getVariable("orderId");
         log.info("[ProcessDeliveryDelegate] Processing delivery for Order #{}", orderId);
 
-        String deliveryUrl = "http://localhost:8084/api/delivery/process";
+        String deliveryUrl = deliveryServiceUrl + "/api/delivery/process";
         Map<String, Object> deliveryRequest = Map.of("orderId", orderId);
 
         try {

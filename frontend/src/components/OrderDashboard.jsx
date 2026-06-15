@@ -151,7 +151,8 @@ const OrderDashboard = ({ refreshTrigger }) => {
       setLastRefresh(new Date());
     } catch (err) {
       setConnected(false);
-      setError('Cannot connect to backend at localhost:8081');
+      const targetBackend = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/orders').replace('/api/orders', '').replace(/^https?:\/\//, '');
+      setError(`Cannot connect to backend at ${targetBackend}`);
     }
   }, []);
 

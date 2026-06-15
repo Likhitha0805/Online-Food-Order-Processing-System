@@ -56,3 +56,11 @@ yarn-error.log
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# ActiveMQ runtime files
+activemq/apache-activemq-*/data/
+activemq/apache-activemq-*/tmp/
+activemq/apache-activemq-*/log/
+*.data
+*.redo
+activemq/apache-activemq-*/data/kahadb/lock

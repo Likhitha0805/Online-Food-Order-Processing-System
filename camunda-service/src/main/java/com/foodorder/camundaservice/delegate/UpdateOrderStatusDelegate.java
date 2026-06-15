@@ -15,6 +15,9 @@ public class UpdateOrderStatusDelegate implements JavaDelegate {
     @Autowired
     private RestTemplate restTemplate;
 
+    @org.springframework.beans.factory.annotation.Value("${service.order.url}")
+    private String orderServiceUrl;
+
     private Expression status;
 
     @Override
@@ -24,7 +27,7 @@ public class UpdateOrderStatusDelegate implements JavaDelegate {
 
         log.info("[UpdateOrderStatusDelegate] Updating Order #{} to status {}", orderId, statusValue);
 
-        String url = "http://localhost:8081/api/orders/" + orderId + "/status?status=" + statusValue;
+        String url = orderServiceUrl + "/api/orders/" + orderId + "/status?status=" + statusValue;
         
         try {
             restTemplate.put(url, null);

@@ -18,13 +18,19 @@ public class ProcessPaymentDelegate implements JavaDelegate {
 
     private final RestTemplate restTemplate;
 
+    @org.springframework.beans.factory.annotation.Value("${service.order.url}")
+    private String orderServiceUrl;
+
+    @org.springframework.beans.factory.annotation.Value("${service.payment.url}")
+    private String paymentServiceUrl;
+
     @Override
     public void execute(DelegateExecution execution) throws Exception {
         Long orderId = (Long) execution.getVariable("orderId");
         log.info("[ProcessPaymentDelegate] Processing payment for Order #{}", orderId);
 
         // Fetch order details to get the amount
-        String orderUrl = "http://localhost:8081/api/orders/" + orderId;
+        String orderUrl = orderServiceUrl + "/api/orders/" + orderId;
         ResponseEntity<Map> orderResponse = restTemplate.getForEntity(orderUrl, Map.class);
         
         if (orderResponse.getStatusCode().is2xxSuccessful() && orderResponse.getBody() != null) {
@@ -32,7 +38,7 @@ public class ProcessPaymentDelegate implements JavaDelegate {
             BigDecimal amount = new BigDecimal(amountObj.toString());
 
             // Call Payment Service
-            String paymentUrl = "http://localhost:8086/api/payments/process";
+            String paymentUrl = paymentServiceUrl + "/api/payments/process";
             Map<String, Object> paymentRequest = Map.of(
                     "orderId", orderId,
                     "amount", amount

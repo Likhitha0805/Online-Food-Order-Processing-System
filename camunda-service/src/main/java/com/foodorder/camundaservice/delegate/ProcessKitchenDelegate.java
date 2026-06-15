@@ -17,12 +17,15 @@ public class ProcessKitchenDelegate implements JavaDelegate {
 
     private final RestTemplate restTemplate;
 
+    @org.springframework.beans.factory.annotation.Value("${service.kitchen.url}")
+    private String kitchenServiceUrl;
+
     @Override
     public void execute(DelegateExecution execution) throws Exception {
         Long orderId = (Long) execution.getVariable("orderId");
         log.info("[ProcessKitchenDelegate] Processing kitchen order for Order #{}", orderId);
 
-        String kitchenUrl = "http://localhost:8083/api/kitchen/process";
+        String kitchenUrl = kitchenServiceUrl + "/api/kitchen/process";
         Map<String, Object> kitchenRequest = Map.of("orderId", orderId);
 
         try {
