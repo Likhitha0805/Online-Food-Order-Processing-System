@@ -29,8 +29,26 @@ const LoginPage = () => {
     if (otp.length === 4) {
       // Mock successful login
       if (role === 'customer') {
+        localStorage.setItem('customer_logged_in', 'true');
         navigate('/customer');
       } else {
+        localStorage.setItem('partner_phone', phone);
+        localStorage.setItem('partner_logged_in', 'true');
+        
+        // Initialize partner profile in localStorage if not exists
+        const partners = JSON.parse(localStorage.getItem('delivery_partners') || '[]');
+        let partner = partners.find(p => p.phone === phone);
+        if (!partner) {
+          partner = {
+            phone: phone,
+            isOnline: false,
+            balance: 0,
+            bankDetails: { account: '', ifsc: '' },
+            store: 'Central Kitchen - Downtown'
+          };
+          partners.push(partner);
+          localStorage.setItem('delivery_partners', JSON.stringify(partners));
+        }
         navigate('/partner');
       }
     }

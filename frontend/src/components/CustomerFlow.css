@@ -275,3 +275,13 @@
   font-size: 1.2rem;
   color: #a0a0b0;
 }
+
+.pulse-timeline .step-icon {
+  animation: pulseTimelineIcon 2s infinite ease-in-out;
+}
+
+@keyframes pulseTimelineIcon {
+  0% { box-shadow: 0 0 0 0 rgba(108, 99, 255, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(108, 99, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(108, 99, 255, 0); }
+}

@@ -1,18 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { IndianRupee, Landmark, History, CheckCircle } from 'lucide-react';
 import './PartnerFlow.css';
 
 const PartnerWallet = () => {
+  const [partnerPhone] = useState(localStorage.getItem('partner_phone') || '9876543210');
   const [bankDetails, setBankDetails] = useState({ account: '', ifsc: '' });
   const [saved, setSaved] = useState(false);
+  const [balance, setBalance] = useState(0);
 
-  // Mock balance (e.g. 5 orders * 20)
-  const balance = 100;
+  const loadPartnerWallet = useCallback(() => {
+    const partners = JSON.parse(localStorage.getItem('delivery_partners') || '[]');
+    let partner = partners.find(p => p.phone === partnerPhone);
+    if (partner) {
+      setBalance(partner.balance || 0);
+      setBankDetails(partner.bankDetails || { account: '', ifsc: '' });
+    }
+  }, [partnerPhone]);
+
+  useEffect(() => {
+    loadPartnerWallet();
+    window.addEventListener('partners_updated', loadPartnerWallet);
+    return () => window.removeEventListener('partners_updated', loadPartnerWallet);
+  }, [loadPartnerWallet]);
 
   const handleSaveBank = (e) => {
     e.preventDefault();
+    const partners = JSON.parse(localStorage.getItem('delivery_partners') || '[]');
+    const partnerIdx = partners.findIndex(p => p.phone === partnerPhone);
+    if (partnerIdx !== -1) {
+      partners[partnerIdx].bankDetails = bankDetails;
+      localStorage.setItem('delivery_partners', JSON.stringify(partners));
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+    window.dispatchEvent(new Event('partners_updated'));
   };
 
   return (
@@ -23,7 +44,7 @@ const PartnerWallet = () => {
         <div className="wallet-balance-card">
           <p style={{ color: 'rgba(255,255,255,0.8)', margin: 0 }}>Available Balance</p>
           <div className="balance-amount">
-            ₹{balance}.00
+            ₹{balance.toFixed(2)}
           </div>
           <p style={{ color: 'rgba(255,255,255,0.8)', margin: 0, fontSize: '0.9rem' }}>
             Earned ₹20.00 per order
@@ -36,7 +57,7 @@ const PartnerWallet = () => {
             Payout Schedule
           </h4>
           <p style={{ color: '#9ca3af', margin: 0, fontSize: '0.9rem' }}>
-            Every Monday the amount will be credited to your linked bank account. Minimum payout is ₹500.
+            Every Monday the amount will credits to the delivery partner account.
           </p>
         </div>
 

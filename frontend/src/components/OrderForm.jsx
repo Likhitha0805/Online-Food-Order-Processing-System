@@ -32,7 +32,10 @@ const OrderForm = ({ onOrderCreated }) => {
         itemName: formData.itemName,
         amount: parseFloat(formData.amount),
       };
-      await createOrder(payload);
+      const res = await createOrder(payload);
+      if (res && res.data) {
+        localStorage.setItem('current_customer_order_id', res.data.id.toString());
+      }
       setAlert({ type: 'success', message: `Order placed for ${formData.customerName}!` });
       setFormData({ customerName: '', itemName: '', amount: '' });
       if (onOrderCreated) onOrderCreated();
