@@ -7,8 +7,10 @@ COPY src ./src
 RUN mvn clean package -DskipTests -B
 
 # Stage 2: Run
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/order-service-0.0.1-SNAPSHOT.jar app.jar
+# Expose port 8081. Render automatically maps public HTTP traffic to this port
+# and overrides the PORT environment variable inside the container to 8081.
 EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "app.jar"]
