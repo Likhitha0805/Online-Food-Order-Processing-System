@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Wifi, WifiOff, RefreshCw, Clock,
   ChefHat, CreditCard, Truck, XCircle, ShoppingBag
 } from 'lucide-react';
-import { getOrders } from '../services/api';
+import { getOrders, isDemoMode, setDemoMode } from '../services/api';
 
 const STATUS_CONFIG = {
   PLACED: {
@@ -141,6 +141,7 @@ const OrderDashboard = ({ refreshTrigger }) => {
   const [connected, setConnected] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [error, setError] = useState(null);
+  const [demoActive, setDemoActive] = useState(isDemoMode());
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -150,6 +151,11 @@ const OrderDashboard = ({ refreshTrigger }) => {
       setError(null);
       setLastRefresh(new Date());
     } catch (err) {
+      if (isDemoMode()) {
+        setConnected(true);
+        setError(null);
+        return;
+      }
       setConnected(false);
       const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/orders';
       const isLocalhost = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
@@ -160,17 +166,37 @@ const OrderDashboard = ({ refreshTrigger }) => {
     }
   }, []);
 
-  // Initial fetch and polling every 2 seconds
+  // Initial fetch and polling - polls less frequently if backend is offline to avoid console flood
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 2000);
+    const pollInterval = demoActive ? 3000 : 8000;
+    const interval = setInterval(fetchOrders, pollInterval);
     return () => clearInterval(interval);
+  }, [fetchOrders, demoActive]);
+
+  // Listen for demo mode updates from other components
+  useEffect(() => {
+    const handleDemoUpdate = () => {
+      fetchOrders();
+    };
+    window.addEventListener('demo_orders_updated', handleDemoUpdate);
+    return () => window.removeEventListener('demo_orders_updated', handleDemoUpdate);
   }, [fetchOrders]);
 
   // Fetch when a new order is created externally
   useEffect(() => {
     if (refreshTrigger > 0) fetchOrders();
   }, [refreshTrigger, fetchOrders]);
+
+  const handleEnableDemoMode = () => {
+    setDemoMode(true);
+    setDemoActive(true);
+    setError(null);
+    setConnected(true);
+    fetchOrders();
+    // Refresh page or broadcast event
+    window.dispatchEvent(new Event('demo_mode_changed'));
+  };
 
   // Build stats
   const stats = Object.entries(STATUS_CONFIG).map(([key, cfg]) => ({
@@ -191,12 +217,24 @@ const OrderDashboard = ({ refreshTrigger }) => {
             <div>
               <div style={{ fontSize: '1rem', fontWeight: 700 }}>Live Order Dashboard</div>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>
-                Polling every 2 seconds
+                {demoActive ? 'Simulation active (updates every 8s)' : 'Polling every 8 seconds'}
               </div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {demoActive && (
+              <span style={{ 
+                background: 'rgba(16,185,129,0.15)', 
+                color: '#34d399', 
+                padding: '0.2rem 0.6rem', 
+                borderRadius: 20, 
+                fontSize: '0.7rem', 
+                fontWeight: 600 
+              }}>
+                Demo Simulation Active
+              </span>
+            )}
             {lastRefresh && (
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                 <RefreshCw size={11} style={{ marginRight: 4, verticalAlign: 'middle' }} />
@@ -233,7 +271,7 @@ const OrderDashboard = ({ refreshTrigger }) => {
         </div>
 
         {error && (
-          <div className="alert-custom alert-error" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem' }}>
+          <div className="alert-custom alert-error" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.6rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
               <WifiOff size={15} />
               Backend Offline
@@ -241,9 +279,28 @@ const OrderDashboard = ({ refreshTrigger }) => {
             <div style={{ fontSize: '0.78rem', opacity: 0.85, lineHeight: 1.5 }}>
               {error}
             </div>
+            
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.2rem', width: '100%' }}>
+              <button 
+                onClick={handleEnableDemoMode}
+                className="btn-submit"
+                style={{
+                  padding: '0.4rem 1rem',
+                  fontSize: '0.75rem',
+                  background: 'linear-gradient(90deg, #10b981, #34d399)',
+                  border: 'none',
+                  margin: 0,
+                  width: 'auto',
+                  cursor: 'pointer'
+                }}
+              >
+                Enable Demo Mode (Mock Backend)
+              </button>
+            </div>
+
             {(import.meta.env.VITE_API_BASE_URL || '').includes('localhost') || !import.meta.env.VITE_API_BASE_URL ? (
               <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-                💡 This dashboard only works when the Spring Boot backend is running locally on your machine.
+                💡 Or start the backend locally to connect automatically.
               </div>
             ) : null}
           </div>
