@@ -25,7 +25,9 @@ public class CorsConfig {
             "http://localhost:*",
             "http://127.0.0.1:*",
             // GitHub Pages
-            "https://likhitha0805.github.io"
+            "https://likhitha0805.github.io",
+            // Netlify
+            "https://*.netlify.app"
         ));
 
         // Add any extra origins from environment variable
