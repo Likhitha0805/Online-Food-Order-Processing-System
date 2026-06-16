@@ -151,8 +151,12 @@ const OrderDashboard = ({ refreshTrigger }) => {
       setLastRefresh(new Date());
     } catch (err) {
       setConnected(false);
-      const targetBackend = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/orders').replace('/api/orders', '').replace(/^https?:\/\//, '');
-      setError(`Cannot connect to backend at ${targetBackend}`);
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/orders';
+      const isLocalhost = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
+      const msg = isLocalhost
+        ? `Backend not reachable at ${apiUrl}. Start the order-service (java -jar order-service.jar) on your machine.`
+        : `Cannot connect to backend at ${apiUrl}. Check that the backend service is running.`;
+      setError(msg);
     }
   }, []);
 
@@ -229,9 +233,19 @@ const OrderDashboard = ({ refreshTrigger }) => {
         </div>
 
         {error && (
-          <div className="alert-custom alert-error">
-            <WifiOff size={15} />
-            {error}
+          <div className="alert-custom alert-error" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+              <WifiOff size={15} />
+              Backend Offline
+            </div>
+            <div style={{ fontSize: '0.78rem', opacity: 0.85, lineHeight: 1.5 }}>
+              {error}
+            </div>
+            {(import.meta.env.VITE_API_BASE_URL || '').includes('localhost') || !import.meta.env.VITE_API_BASE_URL ? (
+              <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+                💡 This dashboard only works when the Spring Boot backend is running locally on your machine.
+              </div>
+            ) : null}
           </div>
         )}
       </div>
